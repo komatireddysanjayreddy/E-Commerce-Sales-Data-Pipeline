@@ -1,0 +1,28 @@
+# Large data files - not needed on Vercel (data is generated at runtime)
+data_generation/*.csv
+data_generation/sales_data.csv
+data_generation/test_sales.csv
+
+# Local dev files
+app.py
+launch.py
+requirements-local.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+redshift/__pycache__/
+
+# Terraform state (sensitive)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfplan
+
+# Streamlit local config
+.streamlit/
+
+# Logs and temp
+*.log
+output/
+curated/
