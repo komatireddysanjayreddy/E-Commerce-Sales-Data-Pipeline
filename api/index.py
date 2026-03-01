@@ -13,19 +13,42 @@ POST /api/run   Run full pipeline -> JSON (KPIs + Plotly charts)
 
 import io
 import json
+import math
 import time
 import uuid
-import os
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, request
 from plotly.utils import PlotlyJSONEncoder
 
 app = Flask(__name__)
+
+
+# ---------------------------------------------------------------------------
+# JSON sanitiser  —  Python's json module emits bare NaN/Infinity which is
+# NOT valid JSON.  JavaScript's JSON.parse() throws on these values.
+# This walks the entire response tree and replaces every NaN/Inf with None
+# so the wire format is always spec-compliant.
+# ---------------------------------------------------------------------------
+
+def _sanitize(obj):
+    """Recursively replace NaN / ±Inf with None for valid JSON output."""
+    if isinstance(obj, float):
+        return None if (math.isnan(obj) or math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
+
+def _json_response(payload: dict, status: int = 200) -> Response:
+    """Serialise *payload* to JSON, sanitising NaN → null first."""
+    body = json.dumps(_sanitize(payload), allow_nan=False)
+    return Response(body, status=status, mimetype="application/json")
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1324,7 +1347,7 @@ def api_run():
         elif source == "manual":
             rows = body.get("rows", [])
             if not rows:
-                return jsonify({"error": "No rows provided."}), 400
+                return _json_response({"error": "No rows provided."}, 400)
             df = pd.DataFrame(rows)
             df["amount"]    = pd.to_numeric(df.get("amount",    None), errors="coerce")
             df["timestamp"] = pd.to_datetime(df.get("timestamp", None), errors="coerce")
@@ -1333,7 +1356,7 @@ def api_run():
                 df["transaction_id"] = [str(uuid.uuid4()) for _ in range(len(df))]
 
         else:
-            return jsonify({"error": "Unknown source."}), 400
+            return _json_response({"error": "Unknown source."}, 400)
 
         # Ensure all required columns exist
         for col in ["transaction_id", "customer_id", "product_category",
@@ -1343,7 +1366,7 @@ def api_run():
 
         df_clean, stats = run_etl(df)
         if len(df_clean) == 0:
-            return jsonify({"error": "No records remained after cleaning. Check your data."}), 400
+            return _json_response({"error": "No records remained after cleaning. Check your data."}, 400)
 
         kpis   = compute_kpis(df_clean)
         charts = build_charts(kpis)
@@ -1360,7 +1383,7 @@ def api_run():
         preview["timestamp"] = preview["timestamp"].astype(str)
         preview["amount"]    = preview["amount"].round(2)
 
-        return jsonify({
+        return _json_response({
             "stats":       stats,
             "summary":     summary,
             "kpis":        kpis,
@@ -1372,7 +1395,7 @@ def api_run():
         })
 
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+        return _json_response({"error": str(exc)}, 500)
 
 
 # ---------------------------------------------------------------------------
