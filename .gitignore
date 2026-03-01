@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+
+# Data files (large generated CSVs - regenerate with generate_sales_data.py)
+data_generation/sales_data.csv
+data_generation/test_sales.csv
+data_generation/*.csv
+
+# Parquet output (local simulation output)
+output/
+curated/
+*.parquet
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfplan
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# AWS credentials (never commit)
+.env
+.env.*
+*.pem
+*.key
+credentials
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Streamlit cache
+.streamlit/secrets.toml
